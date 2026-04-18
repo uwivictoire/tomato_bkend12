@@ -1,0 +1,29 @@
+
+1. command for Training Model
+--------------------------
+cd train_model
+python trainer.py
+
+2. command for running server
+--------------------------
+python manage.py runserver
+
+3. migration
+--------------------------
+python manage.py migrate
+
+
+ input used in predicting
+-----------------
+-device_id
+-image
+
+output:
+---------------------------------
+{
+    "status": "success",
+    "prediction": "healthy",
+    "confidence": "100.00%",
+    "image_url": "http://res.cloudinary.com/dkyamutzd/image/upload/v1776353640/bv5szcrtukhcieg4n9l1.jpg",
+    "timestamp": "2026-04-16T15:34:03.921840Z"
+}

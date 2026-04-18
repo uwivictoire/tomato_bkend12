@@ -1,0 +1,7 @@
+.env
+venv/
+env/
+ENV/
+training_data/
+logs/
+tomato_model.keras
