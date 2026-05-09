@@ -15,18 +15,32 @@ class FarmerSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'farmernames', 'location', 'role']
 
 class DeviceSerializer(serializers.ModelSerializer):
+    farmer_names = serializers.CharField(source='farmer.farmer_names', read_only=True)
+    farmer_id = serializers.IntegerField(source='farmer.id', read_only=True)
+    
     class Meta:
         model = Device
-        fields = ['id', 'device_id', 'device_location', 'field_size', 'created_at']
+        fields = ['id', 'device_id', 'device_location', 'field_size', 'farmer_names', 'farmer_id', 'created_at']
 
 class TomatoScanSerializer(serializers.ModelSerializer):
     device_id = serializers.CharField(source='device.device_id', read_only=True)
     location = serializers.CharField(source='device.farmer.location', read_only=True)
     farmernames = serializers.CharField(source='device.farmer.farmer_names', read_only=True)
+    recommendation = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = TomatoScan
-        fields = ['id', 'prediction', 'confidence', 'image', 'device_id', 'location', 'farmernames', 'created_at']
+        fields = ['id', 'prediction', 'confidence', 'image', 'image_url', 'humidity', 'temperature', 'device_id', 'location', 'farmernames', 'recommendation', 'created_at']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
+
+    def get_recommendation(self, obj):
+        from recommandation.recommendation_service import get_recommendation
+        return get_recommendation(obj.prediction)
 
 class CustomTokenObtainPairSerializer(serializers.Serializer):
     # The user now wants "email" and "password" for login
@@ -72,6 +86,7 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
             return {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'user_id': user.id,
                 'farmer_id': farmer_id,
                 'farmernames': farmernames, # Renamed to farmernames
                 'role': role,

@@ -2,6 +2,7 @@ import os
 import io
 import numpy as np
 import tensorflow as tf
+import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -11,7 +12,11 @@ from django.utils.decorators import method_decorator
 
 # Make sure these models exist in tomato_prediction/models.py
 from tomato_prediction.models import Farmer, Device, TomatoScan
-from .serializers import TomatoScanSerializer, FarmerSerializer
+from .serializers import TomatoScanSerializer, FarmerSerializer, DeviceSerializer
+
+# Import Recommendation and Email services
+from recommandation.recommendation_service import get_recommendation
+from recommandation.email_service import send_disease_report
 
 # Load the model once
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'train_model', 'tomato_model.keras')
@@ -35,10 +40,22 @@ CLASS_NAMES = [
   "Septoria leaf spot",
   "Spider mites Two-spotted spider mite",
   "Target Spot",
+  "Tomato Yellow Leaf Curl Virus",
   "Tomato healthy",
-  "Tomato mosaic virus",
-  "Tomato Yellow Leaf Curl Virus"
+  "Tomato mosaic virus"
 ]
+
+def safe_float(value):
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        # Extract numeric part (e.g., '12h' -> 12.0)
+        match = re.search(r"[-+]?\d*\.?\d+", str(value))
+        if match:
+            return float(match.group())
+        return None
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TomatoPredictionView(APIView):
@@ -47,6 +64,8 @@ class TomatoPredictionView(APIView):
     def post(self, request, *args, **kwargs):
         image_file = request.FILES.get('image')
         device_id = request.data.get('device_id')
+        humidity = request.data.get('humidity')
+        temperature = request.data.get('temperature')
 
         if not image_file or not device_id:
             print(f"[AI] Missing data: image={bool(image_file)}, device_id={device_id}")
@@ -75,16 +94,41 @@ class TomatoPredictionView(APIView):
                 device=device, # Linked to Device now
                 image=image_file, 
                 prediction=prediction_label,
-                confidence=round(confidence, 2)
+                confidence=round(confidence, 2),
+                humidity=safe_float(humidity),
+                temperature=safe_float(temperature)
             )
             print(f"[AI] Scan saved. URL: {scan.image.url}")
+
+            # 4. FETCH RECOMMENDATION
+            recommendation = get_recommendation(prediction_label) or {}
+            
+            # 5. SEND EMAIL TO FARMER
+            try:
+                farmer = device.farmer
+                farmer_email = farmer.user.email
+                farmer_name = farmer.farmer_names or farmer.user.username
+                
+                prediction_data = {
+                    "prediction": prediction_label,
+                    "confidence": f"{confidence:.2f}%",
+                    "image_url": scan.image.url
+                }
+                
+                # Send email (Sync for now, consider async/celery in production)
+                send_disease_report(farmer_email, farmer_name, prediction_data, recommendation)
+            except Exception as email_err:
+                print(f"[WARNING] Email failed but scan saved: {str(email_err)}")
 
             return Response({
                 "status": "success",
                 "prediction": prediction_label,
                 "confidence": f"{confidence:.2f}%",
                 "image_url": scan.image.url,
-                "timestamp": scan.created_at
+                "humidity": scan.humidity,
+                "temperature": scan.temperature,
+                "timestamp": scan.created_at,
+                "recommendation": recommendation # Added recommendation to response
             }, status=201)
 
         except Device.DoesNotExist:
@@ -126,3 +170,82 @@ class AllPredictionsListView(APIView):
         scans = TomatoScan.objects.all()
         serializer = TomatoScanSerializer(scans, many=True)
         return Response(serializer.data)
+
+class DeviceListView(APIView):
+    def get(self, request):
+        devices = Device.objects.all()
+        serializer = DeviceSerializer(devices, many=True)
+        return Response(serializer.data)
+
+class UserPredictionHistoryView(APIView):
+    def get(self, request, user_id):
+        try:
+            farmer = Farmer.objects.get(user_id=user_id)
+            devices = Device.objects.filter(farmer=farmer)
+            scans = TomatoScan.objects.filter(device__in=devices).order_by('-created_at')
+            serializer = TomatoScanSerializer(scans, many=True)
+            return Response(serializer.data)
+        except Farmer.DoesNotExist:
+            return Response({"error": "User/Farmer not found"}, status=404)
+
+class FarmerDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            farmer = Farmer.objects.get(pk=pk)
+            serializer = FarmerSerializer(farmer)
+            return Response(serializer.data)
+        except Farmer.DoesNotExist:
+            return Response({"error": "Farmer not found"}, status=404)
+
+    def put(self, request, pk):
+        try:
+            farmer = Farmer.objects.get(pk=pk)
+            user = farmer.user
+            if 'email' in request.data:
+                user.email = request.data['email']
+                user.username = request.data['email']
+                user.save()
+            
+            serializer = FarmerSerializer(farmer, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        except Farmer.DoesNotExist:
+            return Response({"error": "Farmer not found"}, status=404)
+
+    def delete(self, request, pk):
+        try:
+            farmer = Farmer.objects.get(pk=pk)
+            farmer.user.delete()
+            return Response({"message": "Farmer deleted successfully"}, status=204)
+        except Farmer.DoesNotExist:
+            return Response({"error": "Farmer not found"}, status=404)
+
+class DeviceDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            device = Device.objects.get(pk=pk)
+            serializer = DeviceSerializer(device)
+            return Response(serializer.data)
+        except Device.DoesNotExist:
+            return Response({"error": "Device not found"}, status=404)
+
+    def put(self, request, pk):
+        try:
+            device = Device.objects.get(pk=pk)
+            serializer = DeviceSerializer(device, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        except Device.DoesNotExist:
+            return Response({"error": "Device not found"}, status=404)
+
+    def delete(self, request, pk):
+        try:
+            device = Device.objects.get(pk=pk)
+            device.delete()
+            return Response({"message": "Device deleted successfully"}, status=204)
+        except Device.DoesNotExist:
+            return Response({"error": "Device not found"}, status=404)

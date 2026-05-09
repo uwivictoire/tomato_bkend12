@@ -46,6 +46,10 @@ class TomatoScan(models.Model):
     prediction = models.CharField(max_length=100)
     confidence = models.FloatField()
     
+    # NEW: Environmental data from ESP32/User
+    humidity = models.FloatField(null=True, blank=True)
+    temperature = models.FloatField(null=True, blank=True)
+    
     # THE TIME STAMP: Recorded automatically when the photo is uploaded
     created_at = models.DateTimeField(auto_now_add=True)
 
