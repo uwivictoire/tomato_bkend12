@@ -9,10 +9,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 class FarmerSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    farmer_names = serializers.CharField(required=False)
     farmernames = serializers.CharField(source='farmer_names', read_only=True)
     class Meta:
         model = Farmer
-        fields = ['id', 'user', 'farmernames', 'location', 'role']
+        fields = ['id', 'user', 'farmer_names', 'farmernames', 'location', 'role']
 
 class DeviceSerializer(serializers.ModelSerializer):
     farmer_names = serializers.CharField(source='farmer.farmer_names', read_only=True)
@@ -32,6 +33,30 @@ class TomatoScanSerializer(serializers.ModelSerializer):
     class Meta:
         model = TomatoScan
         fields = ['id', 'prediction', 'confidence', 'image', 'image_url', 'humidity', 'temperature', 'device_id', 'location', 'farmernames', 'recommendation', 'created_at']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
+
+    def get_recommendation(self, obj):
+        from recommandation.recommendation_service import get_recommendation
+        return get_recommendation(obj.prediction)
+
+class TomatoScanSummarySerializer(serializers.ModelSerializer):
+    """
+    Lightweight version for dashboard lists and charts.
+    Excludes recommendation to save processing time.
+    """
+    device_id = serializers.CharField(source='device.device_id', read_only=True)
+    farmernames = serializers.CharField(source='device.farmer.farmer_names', read_only=True)
+    image_url = serializers.SerializerMethodField()
+    recommendation = serializers.SerializerMethodField()
+    timestamp = serializers.DateTimeField(source='created_at', read_only=True)
+
+    class Meta:
+        model = TomatoScan
+        fields = ['id', 'prediction', 'confidence', 'image_url', 'humidity', 'temperature', 'device_id', 'farmernames', 'recommendation', 'timestamp', 'created_at']
 
     def get_image_url(self, obj):
         if obj.image:

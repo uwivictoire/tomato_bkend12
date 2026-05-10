@@ -12,7 +12,7 @@ from django.utils.decorators import method_decorator
 
 # Make sure these models exist in tomato_prediction/models.py
 from tomato_prediction.models import Farmer, Device, TomatoScan
-from .serializers import TomatoScanSerializer, FarmerSerializer, DeviceSerializer
+from .serializers import TomatoScanSerializer, TomatoScanSummarySerializer, FarmerSerializer, DeviceSerializer
 
 # Import Recommendation and Email services
 from recommandation.recommendation_service import get_recommendation
@@ -167,8 +167,10 @@ class FarmerListView(APIView):
 
 class AllPredictionsListView(APIView):
     def get(self, request):
-        scans = TomatoScan.objects.all()
-        serializer = TomatoScanSerializer(scans, many=True)
+        # Optimization: Limit to most recent 100 scans for dashboard performance
+        # Use select_related for foreign keys and use Summary Serializer
+        scans = TomatoScan.objects.select_related('device', 'device__farmer').all().order_by('-created_at')[:100]
+        serializer = TomatoScanSummarySerializer(scans, many=True)
         return Response(serializer.data)
 
 class DeviceListView(APIView):
@@ -182,8 +184,19 @@ class UserPredictionHistoryView(APIView):
         try:
             farmer = Farmer.objects.get(user_id=user_id)
             devices = Device.objects.filter(farmer=farmer)
-            scans = TomatoScan.objects.filter(device__in=devices).order_by('-created_at')
-            serializer = TomatoScanSerializer(scans, many=True)
+            # Optimization: Limit to most recent 50 scans for dashboard and use Summary Serializer
+            scans = TomatoScan.objects.filter(device__in=devices).select_related('device').order_by('-created_at')[:50]
+            serializer = TomatoScanSummarySerializer(scans, many=True)
+            return Response(serializer.data)
+        except Farmer.DoesNotExist:
+            return Response({"error": "User/Farmer not found"}, status=404)
+
+class UserDeviceListView(APIView):
+    def get(self, request, user_id):
+        try:
+            farmer = Farmer.objects.get(user_id=user_id)
+            devices = Device.objects.filter(farmer=farmer)
+            serializer = DeviceSerializer(devices, many=True)
             return Response(serializer.data)
         except Farmer.DoesNotExist:
             return Response({"error": "User/Farmer not found"}, status=404)
@@ -249,3 +262,21 @@ class DeviceDetailView(APIView):
             return Response({"message": "Device deleted successfully"}, status=204)
         except Device.DoesNotExist:
             return Response({"error": "Device not found"}, status=404)
+
+class ScanDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            scan = TomatoScan.objects.get(pk=pk)
+            # Use full serializer to include recommendation
+            serializer = TomatoScanSerializer(scan)
+            return Response(serializer.data)
+        except TomatoScan.DoesNotExist:
+            return Response({"error": "Scan record not found"}, status=404)
+
+    def delete(self, request, pk):
+        try:
+            scan = TomatoScan.objects.get(pk=pk)
+            scan.delete()
+            return Response({"message": "Scan record deleted successfully"}, status=204)
+        except TomatoScan.DoesNotExist:
+            return Response({"error": "Scan record not found"}, status=404)

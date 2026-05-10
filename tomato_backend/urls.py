@@ -8,8 +8,10 @@ from tomato_prediction.views import (
     AllPredictionsListView,
     UserPredictionHistoryView,
     DeviceListView,
+    UserDeviceListView,
     FarmerDetailView,
-    DeviceDetailView
+    DeviceDetailView,
+    ScanDetailView
 )
 from tomato_prediction.registerfarmer import RegisterFarmerView
 from tomato_prediction.registerdevice import DeviceRegistrationView
@@ -27,6 +29,7 @@ urlpatterns = [
     # Farmer & Administrative Endpoints
     path('farmers/', FarmerListView.as_view(), name='farmer-list'),
     path('farmers/<int:pk>/', FarmerDetailView.as_view(), name='farmer-detail'),
+    path('devices/user/<int:user_id>/', UserDeviceListView.as_view(), name='user-device-list'),
     path('devices/', DeviceListView.as_view(), name='device-list'),
     path('devices/<int:pk>/', DeviceDetailView.as_view(), name='device-detail'),
     # AI Prediction Endpoints
@@ -35,4 +38,5 @@ urlpatterns = [
     path('ai/latest/<str:device_id>/', LatestPredictionView.as_view(), name='latest-prediction'),
     path('ai/all-predictions/', AllPredictionsListView.as_view(), name='all-predictions-list'),
     path('ai/history/user/<int:user_id>/', UserPredictionHistoryView.as_view(), name='user-prediction-history'),
+    path('ai/scan/<int:pk>/', ScanDetailView.as_view(), name='scan-detail'),
 ]
