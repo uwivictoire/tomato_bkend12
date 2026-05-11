@@ -52,6 +52,9 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://tomato-health-analyser.vercel.app",
+]
 CSRF_TRUSTED_ORIGINS = ['https://tomato-health-analyser.vercel.app']
 ROOT_URLCONF = 'tomato_backend.urls'
 
