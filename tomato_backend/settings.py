@@ -19,7 +19,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-your-key-here')
 DEBUG = env.bool('DEBUG', default=True)
 
 # Railway provides a domain; '*' is fine for now, but update this later
-ALLOWED_HOSTS = ['*'] 
+ALLOWED_HOSTS = ['*', 'tomato-health-analyser.vercel.app'] 
 
 # Application definition
 INSTALLED_APPS = [
@@ -52,6 +52,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+CSRF_TRUSTED_ORIGINS = ['https://tomato-health-analyser.vercel.app']
 ROOT_URLCONF = 'tomato_backend.urls'
 
 TEMPLATES = [
