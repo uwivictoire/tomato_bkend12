@@ -19,6 +19,7 @@ from tomato_prediction.views import (
 from tomato_prediction.registerfarmer import RegisterFarmerView
 from tomato_prediction.registerdevice import DeviceRegistrationView
 from tomato_prediction.login import LoginView
+from tomato_prediction.update_password import UpdatePasswordView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -29,6 +30,7 @@ urlpatterns = [
     path('device/register/', DeviceRegistrationView.as_view(), name='register-device'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/update-password/', UpdatePasswordView.as_view(), name='update_password'),
     # Farmer & Administrative Endpoints
     path('farmers/', FarmerListView.as_view(), name='farmer-list'),
     path('farmers/<int:pk>/', FarmerDetailView.as_view(), name='farmer-detail'),
