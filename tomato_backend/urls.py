@@ -1,5 +1,8 @@
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+
 from tomato_prediction.views import (
     TomatoPredictionView, 
     PredictionHistoryView, 
@@ -40,3 +43,6 @@ urlpatterns = [
     path('ai/history/user/<int:user_id>/', UserPredictionHistoryView.as_view(), name='user-prediction-history'),
     path('ai/scan/<int:pk>/', ScanDetailView.as_view(), name='scan-detail'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

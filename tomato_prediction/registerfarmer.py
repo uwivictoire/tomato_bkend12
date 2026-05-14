@@ -5,16 +5,15 @@ from .models import Farmer
 
 class RegisterFarmerView(APIView):
     def post(self, request):
-        # 1. Get all fields from the request
         email = request.data.get('email')
-        farmer_names = request.data.get('farmernames')
+        farmer_names = request.data.get('farmernames') or request.data.get('farmer_names')
         password = request.data.get('password')
         location = request.data.get('location')
         user_role = request.data.get('userrole', 'farmer') # Default to farmer if not provided
 
         # Simple Validation
         if not all([farmer_names, password, location]):
-            return Response({"error": "Missing required fields (farmernames, password, location)"}, status=400)
+            return Response({"error": "Missing required fields (farmer_names, password, location)"}, status=400)
 
         try:
             # 2. Create the Auth User

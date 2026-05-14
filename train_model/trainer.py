@@ -104,7 +104,7 @@ def start_training():
     model.fit(
         train_ds,
         validation_data=val_ds,
-        epochs=15,
+        epochs=3,
         callbacks=[early_stop]
     )
 
@@ -127,7 +127,7 @@ def start_training():
     model.fit(
         train_ds,
         validation_data=val_ds,
-        epochs=15,
+        epochs=3,
         callbacks=[early_stop]
     )
 

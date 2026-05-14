@@ -40,6 +40,7 @@ CLASS_NAMES = [
   "Septoria leaf spot",
   "Spider mites Two-spotted spider mite",
   "Target Spot",
+  "This picture does not have relationship with Tomato",
   "Tomato Yellow Leaf Curl Virus",
   "Tomato healthy",
   "Tomato mosaic virus"
@@ -86,6 +87,8 @@ class TomatoPredictionView(APIView):
             predictions = model.predict(img_array)
             prediction_label = CLASS_NAMES[np.argmax(predictions[0])]
             confidence = float(np.max(predictions[0])) * 100
+            
+                
             print(f"[AI] Prediction complete: {prediction_label} ({confidence:.2f}%)")
 
             # 3. SAVE TO POSTGRES & CLOUDINARY
@@ -124,7 +127,7 @@ class TomatoPredictionView(APIView):
                 "status": "success",
                 "prediction": prediction_label,
                 "confidence": f"{confidence:.2f}%",
-                "image_url": scan.image.url,
+                "image_url": request.build_absolute_uri(scan.image.url),
                 "humidity": scan.humidity,
                 "temperature": scan.temperature,
                 "timestamp": scan.created_at,

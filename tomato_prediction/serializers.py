@@ -36,7 +36,11 @@ class TomatoScanSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         if obj.image:
-            return obj.image.url
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            # Fallback if request is not in context
+            return f"http://127.0.0.1:8000{obj.image.url}"
         return None
 
     def get_recommendation(self, obj):
@@ -60,7 +64,10 @@ class TomatoScanSummarySerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         if obj.image:
-            return obj.image.url
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return f"http://127.0.0.1:8000{obj.image.url}"
         return None
 
     def get_recommendation(self, obj):

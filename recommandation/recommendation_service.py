@@ -64,6 +64,18 @@ def get_recommendation(disease_name):
 
     search_term = disease_name.lower().strip()
     
+    # 0. Check for Out-of-Domain message
+    if search_term == "this picture does not have relationship with tomato":
+        return {
+            "disease_name": "Non-Tomato Image Detected",
+            "causal_agent": "N/A",
+            "symptoms": "The uploaded image does not appear to be a tomato leaf or is too blurry for the AI to identify.",
+            "treatment": "Please upload a clear, high-resolution photo of a single tomato leaf.",
+            "prevention": "Ensure proper lighting and focus when taking pictures of your plants.",
+            "alert_message": "Action Required: Please re-upload a valid tomato leaf image for analysis.",
+            "severity": "Low"
+        }
+    
     # 1. Try exact match in dict
     if search_term in _DISEASE_DICT_CACHE:
         return _DISEASE_DICT_CACHE[search_term]

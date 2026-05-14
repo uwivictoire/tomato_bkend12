@@ -1,6 +1,6 @@
+from cloudinary.models import CloudinaryField
 from django.db import models
 from django.contrib.auth.models import User
-from cloudinary.models import CloudinaryField
 
 class Farmer(models.Model):
     ROLE_CHOICES = [
@@ -40,8 +40,8 @@ class TomatoScan(models.Model):
     # Links this scan to the specific device
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='scans', null=True, blank=True)
     
-    # Cloudinary handles the storage, Postgres stores the URL link
-    image = CloudinaryField('image') 
+    # Local storage for development to avoid Cloudinary timestamp issues
+    image = models.ImageField(upload_to='scans/') 
     
     prediction = models.CharField(max_length=100)
     confidence = models.FloatField()
