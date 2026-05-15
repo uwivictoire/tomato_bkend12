@@ -32,18 +32,23 @@ try:
 except Exception as e:
     print(f"--- [ERROR] Failed to load AI Model: {str(e)} ---")
 
+# IMPORTANT: This list MUST match the exact order detected by TensorFlow (alphabetical by folder name).
+# Detected by trainer.py: ['Bacterial spot', 'Early blight', 'Late blight', 'Leaf Mold',
+# 'Septoria leaf spot', 'Spider mites Two-spotted spider mite', 'Target Spot',
+# 'This picture does not have relationship with Tomato', 'Tomato Yellow Leaf Curl Virus',
+# 'Tomato healthy', 'Tomato mosaic virus']
 CLASS_NAMES = [
-  "Bacterial spot",
-  "Early blight",
-  "Late blight",
-  "Leaf Mold",
-  "Septoria leaf spot",
-  "Spider mites Two-spotted spider mite",
-  "Target Spot",
-  "This picture does not have relationship with Tomato",
-  "Tomato Yellow Leaf Curl Virus",
-  "Tomato healthy",
-  "Tomato mosaic virus"
+  "Bacterial Spot",          # 0 (Bacterial spot)
+  "Early Blight",            # 1 (Early blight)
+  "Late Blight",             # 2 (Late blight)
+  "Leaf Mold",               # 3 (Leaf Mold)
+  "Septoria Leaf Spot",      # 4 (Septoria leaf spot)
+  "Spider Mites",            # 5 (Spider mites Two-spotted spider mite)
+  "Target Spot",             # 6 (Target Spot)
+  "Non-Tomato Image",        # 7 (This picture does not have relationship with Tomato)
+  "Yellow Leaf Curl Virus",  # 8 (Tomato Yellow Leaf Curl Virus)
+  "Healthy",                 # 9 (Tomato healthy)
+  "Mosaic Virus",            # 10 (Tomato mosaic virus)
 ]
 
 def safe_float(value):
@@ -87,6 +92,9 @@ class TomatoPredictionView(APIView):
             predictions = model.predict(img_array)
             prediction_label = CLASS_NAMES[np.argmax(predictions[0])]
             confidence = float(np.max(predictions[0])) * 100
+            
+            if confidence < 20.0:
+                prediction_label = "Non-Tomato Image"
             
                 
             print(f"[AI] Prediction complete: {prediction_label} ({confidence:.2f}%)")

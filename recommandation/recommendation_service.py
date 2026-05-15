@@ -65,7 +65,7 @@ def get_recommendation(disease_name):
     search_term = disease_name.lower().strip()
     
     # 0. Check for Out-of-Domain message
-    if search_term == "this picture does not have relationship with tomato":
+    if search_term == "non-tomato image":
         return {
             "disease_name": "Non-Tomato Image Detected",
             "causal_agent": "N/A",
