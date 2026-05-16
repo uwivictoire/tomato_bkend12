@@ -5,3 +5,4 @@ ENV/
 training_data/
 logs/
 tomato_model.keras
+media/
