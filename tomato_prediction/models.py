@@ -40,7 +40,7 @@ class TomatoScan(models.Model):
     # Links this scan to the specific device
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='scans', null=True, blank=True)
     
-    # Local storage for development to avoid Cloudinary timestamp issues
+    # Stored on Cloudinary via django-cloudinary-storage
     image = models.ImageField(upload_to='scans/') 
     
     prediction = models.CharField(max_length=100)
