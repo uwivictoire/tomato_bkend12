@@ -7,7 +7,7 @@ const char* ssid = "ssid_wifi";
 const char* password = "pw_wifi";
 
 // ---------------- SERVER ----------------
-const char* serverUrl = "http://your_pc_ip:8000/ai/analyze/";
+const char* serverUrl = "http://your_pc_ip:8000/ai/analyze/?lite=true";
 
 // ---------------- CAMERA PINS (AI Thinker) ----------------
 #define PWDN_GPIO_NUM     32

@@ -131,7 +131,10 @@ class TomatoPredictionView(APIView):
             except Exception as email_err:
                 print(f"[WARNING] Email failed but scan saved: {str(email_err)}")
 
-            return Response({
+            # Check if 'lite' parameter is requested
+            lite = (request.query_params.get('lite', '').lower() == 'true') or (request.GET.get('lite', '').lower() == 'true')
+
+            response_data = {
                 "status": "success",
                 "prediction": prediction_label,
                 "confidence": f"{confidence:.2f}%",
@@ -139,8 +142,12 @@ class TomatoPredictionView(APIView):
                 "humidity": scan.humidity,
                 "temperature": scan.temperature,
                 "timestamp": scan.created_at,
-                "recommendation": recommendation # Added recommendation to response
-            }, status=201)
+            }
+
+            if not lite:
+                response_data["recommendation"] = recommendation
+
+            return Response(response_data, status=201)
 
         except Device.DoesNotExist:
             return Response({"error": "Device ID not registered. Please register the device first."}, status=404)
