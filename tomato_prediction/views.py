@@ -112,7 +112,7 @@ class TomatoPredictionView(APIView):
             print(f"[AI] Scan saved. URL: {scan.image.url}")
 
             # 4. FETCH RECOMMENDATION
-            recommendation = get_recommendation(prediction_label) or {}
+            recommendation = get_recommendation(prediction_label, scan.temperature, scan.humidity) or {}
             
             # 5. SEND EMAIL TO FARMER
             try:
