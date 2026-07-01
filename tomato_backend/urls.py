@@ -14,7 +14,8 @@ from tomato_prediction.views import (
     UserDeviceListView,
     FarmerDetailView,
     DeviceDetailView,
-    ScanDetailView
+    ScanDetailView,
+    DroidCamProxyView
 )
 from tomato_prediction.registerfarmer import RegisterFarmerView
 from tomato_prediction.registerdevice import DeviceRegistrationView
@@ -44,6 +45,7 @@ urlpatterns = [
     path('ai/all-predictions/', AllPredictionsListView.as_view(), name='all-predictions-list'),
     path('ai/history/user/<int:user_id>/', UserPredictionHistoryView.as_view(), name='user-prediction-history'),
     path('ai/scan/<int:pk>/', ScanDetailView.as_view(), name='scan-detail'),
+    path('ai/droidcam-snapshot/', DroidCamProxyView.as_view(), name='droidcam-snapshot'),
 ]
 
 if settings.DEBUG:

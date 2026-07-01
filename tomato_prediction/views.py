@@ -1,14 +1,16 @@
 import os
 import io
+import re
+import requests
 import numpy as np
 import tensorflow as tf
-import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.http import HttpResponse
 
 # Make sure these models exist in tomato_prediction/models.py
 from tomato_prediction.models import Farmer, Device, TomatoScan
@@ -298,3 +300,79 @@ class ScanDetailView(APIView):
             return Response({"message": "Scan record deleted successfully"}, status=204)
         except TomatoScan.DoesNotExist:
             return Response({"error": "Scan record not found"}, status=404)
+
+class DroidCamProxyView(APIView):
+    def get(self, request, *args, **kwargs):
+        url = request.query_params.get('url')
+        if not url:
+            return Response({"error": "Missing DroidCam url parameter"}, status=400)
+            
+        if not url.startswith(('http://', 'https://')):
+            url = f"http://{url}"
+            
+        base_url = url.rstrip('/')
+        # The base URL returns an HTML dashboard. The actual video stream is at /video
+        video_url = base_url if base_url.endswith('/video') else f"{base_url}/video"
+        
+        print(f"[DROIDCAM] User provided: {url}, using Stream URL: {video_url}")
+        
+        try:
+            import time
+            # We will try up to 3 times in case of busy/override
+            for attempt in range(3):
+                print(f"[DROIDCAM] Attempt {attempt+1} connecting to {video_url}")
+                response = requests.get(video_url, stream=True, timeout=5)
+                
+                # Check for HTML content (usually means busy)
+                content_type = response.headers.get('content-type', '').lower()
+                is_html = 'html' in content_type
+                
+                if is_html:
+                    chunk = next(response.iter_content(chunk_size=2048), b"")
+                    html_text = chunk.decode('utf-8', errors='ignore').lower()
+                    
+                    is_busy = "busy" in html_text or "take over" in html_text or "another client" in html_text
+                    
+                    if is_busy:
+                        print("[DROIDCAM] DroidCam is busy. Sending take-over command...")
+                        try:
+                            # Send override
+                            override_url = f"{base_url}/override" if not base_url.endswith('/video') else f"{base_url.rsplit('/', 1)[0]}/override"
+                            requests.get(override_url, timeout=3)
+                            print("[DROIDCAM] Override sent. Waiting 1.5s before retry...")
+                            time.sleep(1.5)
+                            continue # Retry the loop
+                        except Exception as e:
+                            print(f"[DROIDCAM] Override failed: {e}")
+                    
+                    if attempt == 2:
+                        return Response({"error": "DroidCam returned a web page instead of a video stream. Ensure the app is open."}, status=400)
+                    continue
+                
+                # If not HTML, search for JPEG markers in the stream
+                byte_buffer = b""
+                image_bytes = None
+                
+                for chunk in response.iter_content(chunk_size=8192):
+                    byte_buffer += chunk
+                    start_idx = byte_buffer.find(b'\xff\xd8')
+                    if start_idx != -1:
+                        end_idx = byte_buffer.find(b'\xff\xd9', start_idx)
+                        if end_idx != -1:
+                            image_bytes = byte_buffer[start_idx : end_idx + 2]
+                            break
+                    if len(byte_buffer) > 3 * 1024 * 1024:
+                        break
+                        
+                if image_bytes:
+                    print(f"[DROIDCAM] Successfully extracted frame!")
+                    return HttpResponse(image_bytes, content_type="image/jpeg")
+                else:
+                    if attempt == 2:
+                        return Response({"error": "Connected to DroidCam but could not extract an image from the stream."}, status=400)
+                        
+            return Response({"error": "Failed to connect after retries. DroidCam might be busy."}, status=400)
+            
+        except requests.exceptions.RequestException as e:
+            print(f"[DROIDCAM] Connection error: {str(e)}")
+            return Response({"error": f"Could not connect to {url}. Error: {str(e)}"}, status=400)
