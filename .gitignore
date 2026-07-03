@@ -1,8 +1,6 @@
-.env
-venv/
-env/
-ENV/
-training_data/
-logs/
-tomato_model.keras
-media/
+config.bat
+node_modules
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
